@@ -1,0 +1,8 @@
+[project]
+name = "mcp-lab-02-minimal-server"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = ["mcp[cli]>=2.0.0"]
+
+[tool.uv]
+package = false
