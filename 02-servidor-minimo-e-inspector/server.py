@@ -12,11 +12,11 @@ def health() -> dict[str, str]:
 
 
 @mcp.tool()
-def add(a: int, b: int) -> int:
+def add(a:int, b:int) -> int:
     """Suma dos números enteros."""
-    # TODO(alumno): implementá la operación sin cambiar el contrato.
-    # Después probá con valores válidos e inválidos en MCP Inspector.
-    raise NotImplementedError("Implementar la suma como parte de la actividad.")
+    if not isinstance(a, int) or not isinstance(b, int):
+        return {"error": "Ambos parámetros deben ser números enteros."}
+    return a + b
 
 
 if __name__ == "__main__":
