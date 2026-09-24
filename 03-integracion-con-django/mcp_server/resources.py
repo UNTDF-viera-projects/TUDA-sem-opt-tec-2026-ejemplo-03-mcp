@@ -7,17 +7,23 @@ No copiar queries del ORM ni reglas de negocio: usar ``get_activity_service()``.
 
 from mcp.server import MCPServer
 
+from activities.services import get_activity_service
+
 
 def register_resources(mcp: MCPServer) -> None:
     @mcp.resource("activities://available")
     def available_activities() -> str:
         """Lista las actividades que todavía tienen cupo."""
-        # TODO(alumno): usar get_activity_service().list_available() y
-        # devolver el catálogo en Markdown. Manejar el caso vacío con:
-        # "# Actividades disponibles\n\n_No hay actividades cargadas todavía._"
-        # Formato sugerido por fila:
-        # - **{title}** (`{id}`): {seats} cupos
-        return "# Actividades disponibles\n\n_No hay actividades cargadas todavía._"
+        service = get_activity_service()
+        activities = service.list_available()
+
+        if not activities:
+            return "# Actividades disponibles\n\n_No hay actividades cargadas todavía._"
+
+        lines = ["# Actividades disponibles", ""]
+        for activity in activities:
+            lines.append(f"- **{activity.title}** (`{activity.id}`): {activity.seats} cupos")
+        return "\n".join(lines)
 
     @mcp.resource("activities://{activity_id}")
     def activity_detail(activity_id: str) -> str:

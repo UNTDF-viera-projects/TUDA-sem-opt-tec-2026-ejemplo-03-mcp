@@ -1,5 +1,24 @@
 """Punto de entrada del servidor MCP para el proyecto Django."""
 
+import os
+import sys
+from pathlib import Path
+
+# Asegurar que Django esté configurado cuando el servidor corre fuera de manage.py
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+
+try:
+    import django
+except ImportError:
+    django = None
+
+if django is not None:
+    django.setup()
+
 from mcp.server import MCPServer
 
 from mcp_server.prompts import register_prompts
@@ -13,6 +32,4 @@ register_prompts(mcp)
 
 
 if __name__ == "__main__":
-    # TODO(alumno): si el servidor vive fuera de manage.py, inicializá Django
-    # antes de importar modelos o servicios que dependan del ORM.
     mcp.run()
