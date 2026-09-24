@@ -7,32 +7,37 @@ No exponer SQL, ORM ni views como parte del contrato MCP.
 
 from mcp.server import MCPServer
 
+from activities.services import Activity, get_activity_service
 
-def _as_dict(activity: object) -> dict[str, object]:
+MAX_QUERY_LENGTH = 100
+
+
+def _as_dict(activity: Activity) -> dict[str, object]:
     """Convierte el DTO del service layer en un dict apto para MCP.
 
     Evita exponer el objeto ORM o el service layer como contrato.
     Campos: id, title, available, seats.
     """
-    # TODO(alumno): completar a partir del DTO de activities/services.py
-    # (id, title, available, seats). Pista: activity.id, activity.title, ...
     return {
-        "id": activity.id,  # type: ignore[attr-defined]
-        "title": activity.title,  # type: ignore[attr-defined]
-        "available": activity.available,  # type: ignore[attr-defined]
-        "seats": activity.seats,  # type: ignore[attr-defined]
+        "id": activity.id,
+        "title": activity.title,
+        "available": activity.available,
+        "seats": activity.seats,
     }
+
+
+def _normalize_query(query: str) -> str:
+    """Limpia la query: recorta y limita la longitud a MAX_QUERY_LENGTH."""
+    return str(query or "").strip()[:MAX_QUERY_LENGTH]
 
 
 def register_tools(mcp: MCPServer) -> None:
     @mcp.tool()
     def search_activities(query: str, only_available: bool = True) -> list[dict[str, object]]:
         """Busca actividades por título y, opcionalmente, sólo entre las disponibles."""
-        # TODO(alumno): definir límites de longitud y normalización de query,
-        # luego delegar en get_activity_service().search(query, only_available)
-        # y devolver [_as_dict(a) for a in results].
-        _ = (query, only_available)
-        return []
+        service = get_activity_service()
+        results = service.search(_normalize_query(query), only_available)
+        return [_as_dict(activity) for activity in results]
 
     @mcp.tool()
     def register_for_activity(activity_id: str, student_email: str) -> dict[str, str]:
