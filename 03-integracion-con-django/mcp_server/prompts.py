@@ -23,24 +23,38 @@ def register_prompts(mcp: MCPServer) -> None:
             student_email: correo del estudiante, si ya se conoce.
                 Vacío = el modelo debe pedirlo antes de inscribir.
         """
-        # TODO(alumno): devolver una lista de mensajes {"role": ..., "content": ...}
-        # que guíe al modelo por este flujo, usando las capacidades del servidor:
-        #   1. Leer el resource `activities://available` para el catálogo inicial.
-        #   2. Usar la tool `search_activities` con `query` para afinar
-        #      (recordar `only_available=True` por defecto).
-        #   3. Leer el resource template `activities://{activity_id}` para el
-        #      detalle de la candidata elegida.
-        #   4. Pedir confirmación explícita y el `student_email` si falta.
-        #   5. Usar la tool `register_for_activity` y comunicar el resultado,
-        #      incluyendo los casos de error (cupo lleno, ya inscripto,
-        #      email inválido, actividad inexistente).
-        # El prompt NO llama al service layer ni inscribe directamente:
-        # sólo devuelve mensajes. Incluí `query` y `student_email` en el texto
-        # cuando vengan dados. Mantené el tono en español rioplatense.
-        _ = (query, student_email)
+        query = (query or "").strip()
+        student_email = (student_email or "").strip()
+
+        contexto = "Che, quiero inscribirme a una actividad de la UNTDF."
+        if query:
+            contexto += f' Mi tema de interés es "{query}".'
+        else:
+            contexto += " Quiero ver todo el catálogo."
+        if student_email:
+            contexto += f" Mi email es {student_email}."
+
+        instrucciones = "\n".join(
+            [
+                "Dale, te guío paso a paso para explorar, elegir e inscribirte. Seguí este orden:",
+                "",
+                "1. Leé el resource `activities://available` para mostrar el catálogo inicial de actividades con cupo.",
+                f"2. Usá la tool `search_activities` con `query=\"{query}\"` y `only_available=True` para afinar la búsqueda"
+                + (" según el interés del estudiante." if query else " (si no hay tema, mostrá todo el catálogo)."),
+                "3. Cuando el estudiante elija una candidata, leé el resource template `activities://{activity_id}` con su ID para mostrarle título, descripción y cupos.",
+                "4. Antes de inscribir, pedí confirmación explícita ('¿Confirmás la inscripción a X?')"
+                + (
+                    f" El email ya conocido es {student_email}, confirmalo igual."
+                    if student_email
+                    else " y pedí el `student_email` si todavía no lo tenés (es obligatorio para inscribir)."
+                ),
+                "5. Recién con confirmación + email, llamá a la tool `register_for_activity` con `activity_id` y `student_email`.",
+                "6. Comunicá el resultado de forma clara: si es `registered`, celebralo con el ID; si es `activity_full`, `already_registered`, `invalid_email` o `activity_not_found`, explicá qué pasó y ofrecé alternativas del catálogo.",
+                "",
+                "Importante: vos no inscribís por tu cuenta, sólo orquestás estos resources y tools. No inventes actividades ni IDs.",
+            ]
+        )
         return [
-            {
-                "role": "user",
-                "content": "TODO(alumno): reemplazar por el flujo guiado de inscripción.",
-            }
+            {"role": "user", "content": contexto},
+            {"role": "assistant", "content": instrucciones},
         ]
