@@ -7,7 +7,7 @@ No copiar queries del ORM ni reglas de negocio: usar ``get_activity_service()``.
 
 from mcp.server import MCPServer
 
-from activities.services import get_activity_service
+from activities.services import ActivityNotFound, get_activity_service
 
 
 def register_resources(mcp: MCPServer) -> None:
@@ -28,11 +28,20 @@ def register_resources(mcp: MCPServer) -> None:
     @mcp.resource("activities://{activity_id}")
     def activity_detail(activity_id: str) -> str:
         """Devuelve el detalle legible de una actividad identificada por su URI."""
-        # TODO(alumno): usar get_activity_service().get_activity(activity_id).
-        # - Éxito: devolver Markdown con título, ID y cupos
-        #   (ver activities/services.py para los campos del DTO).
-        # - Si lanza ActivityNotFound: devolver una representación de error
-        #   apta para el host, sin filtrar datos internos, por ejemplo:
-        #   f"activity_not_found: no existe la actividad `{activity_id}`"
-        _ = activity_id
-        return f"activity_not_found: no existe la actividad `{activity_id}`"
+        service = get_activity_service()
+        try:
+            activity = service.get_activity(activity_id)
+        except ActivityNotFound:
+            return f"activity_not_found: no existe la actividad `{activity_id}`"
+
+        estado = "Disponible" if activity.available else "No disponible"
+        return "\n".join(
+            [
+                f"# {activity.title}",
+                "",
+                f"- ID: `{activity.id}`",
+                f"- Descripción: {activity.description}",
+                f"- Cupos: {activity.seats} de {activity.capacity}",
+                f"- Estado: {estado}",
+            ]
+        )
