@@ -7,7 +7,14 @@ No exponer SQL, ORM ni views como parte del contrato MCP.
 
 from mcp.server import MCPServer
 
-from activities.services import Activity, get_activity_service
+from activities.services import (
+    Activity,
+    ActivityFull,
+    ActivityNotFound,
+    AlreadyRegistered,
+    InvalidEmail,
+    get_activity_service,
+)
 
 MAX_QUERY_LENGTH = 100
 
@@ -42,14 +49,17 @@ def register_tools(mcp: MCPServer) -> None:
     @mcp.tool()
     def register_for_activity(activity_id: str, student_email: str) -> dict[str, str]:
         """Inscribe a un estudiante en una actividad."""
-        # TODO(alumno): delegar en get_activity_service().register(activity_id,
-        # student_email) y mapear el resultado / errores a dicts:
-        # - Éxito: {"status": "registered", "activity_id": ..., "student_email": ...}
-        #   (lo que ya devuelve el servicio).
-        # - ActivityNotFound -> {"status": "activity_not_found", "message": ...}
-        # - InvalidEmail -> {"status": "invalid_email", "message": ...}
-        # - ActivityFull -> {"status": "activity_full", "message": ...}
-        # - AlreadyRegistered -> {"status": "already_registered", "message": ...}
-        # No dejar el `not_implemented`: es sólo el marcador inicial.
-        _ = (activity_id, student_email)
-        return {"status": "not_implemented", "message": "Inscripción no implementada todavía."}
+        service = get_activity_service()
+        try:
+            return service.register(activity_id, student_email)
+        except ActivityNotFound:
+            return {
+                "status": "activity_not_found",
+                "message": f"no existe la actividad `{activity_id}`",
+            }
+        except InvalidEmail as error:
+            return {"status": "invalid_email", "message": str(error)}
+        except ActivityFull as error:
+            return {"status": "activity_full", "message": str(error)}
+        except AlreadyRegistered as error:
+            return {"status": "already_registered", "message": str(error)}
