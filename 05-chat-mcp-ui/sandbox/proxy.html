@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sandbox MCP Apps</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      iframe {
+        border: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      // El proxy pertenece a otro origen. La vista tiene además un origen opaco
+      // porque su iframe permite scripts, pero no allow-same-origin.
+      const hostOrigin = new URLSearchParams(location.search).get("hostOrigin");
+      let guest;
+      let loaded = false;
+      const pending = [];
+      window.addEventListener("message", (event) => {
+        const data = event.data;
+        if (!data || typeof data !== "object" || data.jsonrpc !== "2.0") return;
+        if (event.source === window.parent && event.origin === hostOrigin) {
+          if (data.method === "ui/notifications/sandbox-resource-ready") {
+            if (guest || typeof data.params?.html !== "string") return;
+            guest = document.createElement("iframe");
+            guest.title = "Tarjeta meteorológica";
+            guest.setAttribute("sandbox", "allow-scripts");
+            guest.addEventListener("load", () => {
+              loaded = true;
+              for (const message of pending.splice(0))
+                guest.contentWindow.postMessage(message, "*");
+            });
+            guest.srcdoc = data.params.html;
+            document.body.appendChild(guest);
+          } else if (guest && loaded) {
+            guest.contentWindow.postMessage(data, "*");
+          } else {
+            pending.push(data);
+          }
+        } else if (guest && event.source === guest.contentWindow) {
+          window.parent.postMessage(data, hostOrigin);
+        }
+      });
+      window.parent.postMessage(
+        {
+          jsonrpc: "2.0",
+          method: "ui/notifications/sandbox-proxy-ready",
+          params: {},
+        },
+        hostOrigin,
+      );
+    </script>
+  </body>
+</html>
